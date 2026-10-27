@@ -183,6 +183,19 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .pct small{font-family:var(--f-body);font-size:.8rem;color:var(--muted);font-weight:700}
 .grad{display:inline-block;width:46px;height:10px;border-radius:99px;background:linear-gradient(90deg,var(--rest),var(--m-pri));vertical-align:middle}
 .add-top{width:100%;padding:12px;border:2px dashed var(--go);color:var(--go);background:var(--surface);font-weight:800;font-size:1.02rem;border-radius:14px}
+/* programs */
+.prog-card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.prog-card.on{border-color:var(--pen);box-shadow:0 0 0 3px var(--pen-soft)}
+.prog-card .row button{padding:10px 12px;font-size:.98rem}
+.badge{align-self:flex-start;font-size:.75rem;font-weight:800;color:#fff;background:var(--pen);border-radius:99px;padding:1px 9px}
+.cur-prog{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.cur-prog b{display:block}
+.cur-prog button{flex:none;padding:8px 12px;font-weight:700;background:var(--pen-soft);color:var(--pen)}
+.code-box{width:100%;min-height:180px;border:1.5px solid var(--line);border-radius:12px;padding:10px;font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;direction:ltr;text-align:left;background:var(--surface);color:var(--ink)}
+.ref-photo{width:100%;border-radius:12px;display:block;background:var(--paper)}
+details.ref{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+details.ref summary{font-weight:700;cursor:pointer}
+.steps{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 
@@ -190,9 +203,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <!-- HOME -->
 <section id="home" class="wrap">
   <header style="display:flex;flex-direction:column;gap:6px">
-    <span class="label">תוכנית מ־21.10.2026 · עם התוספות של בנג׳י</span>
     <h1>האימון שלי</h1>
   </header>
+  <div class="cur-prog">
+    <span style="min-width:0"><span class="label">התוכנית הפעילה</span><b id="progName"></b><span class="ex-meta" id="progNote"></span></span>
+    <button id="progsBtn">התוכניות שלי</button>
+  </div>
   <button id="resumeBtn" class="btn btn-go" hidden>להמשיך את האימון שהתחיל</button>
   <button id="startBtn" class="btn btn-primary">התחל אימון</button>
   <p class="note">בזמן האימון אפשר ללחוץ על "שלב תרגיל נוסף" ולסמן עוד מכשיר. האפליקציה תעביר אותך ביניהם אחרי כל סט ומנוחה.</p>
@@ -200,13 +216,14 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     <h2>התוכנית</h2>
     <button id="editBtn" class="edit-toggle" aria-pressed="false">עריכת התוכנית</button>
   </div>
-  <p id="editHint" class="note" hidden>כאן אפשר לשנות לכל תרגיל סטים, חזרות, משקל ומספר מכשיר. השינויים נשמרים מיד.</p>
+  <p id="editHint" class="note" hidden>כאן אפשר לשנות לכל תרגיל סטים, חזרות, משקל ומספר מכשיר, או למחוק אותו. השינויים נשמרים מיד.</p>
+  <details class="ref" id="refBox" hidden><summary>תמונת התוכנית מהמאמן</summary><img id="refPhoto" class="ref-photo" alt="דף התוכנית מהמאמן"></details>
   <div id="planList" style="display:flex;flex-direction:column;gap:10px"></div>
   <button id="newExBtn" class="add-new">+ הוספת תרגיל חדש</button>
   <div id="resetBox" hidden style="display:flex;flex-direction:column;gap:10px">
-    <button id="resetBtn" class="btn btn-ghost">חזרה לסטים ולחזרות של התוכנית המקורית</button>
+    <button id="resetBtn" class="btn btn-ghost">החזר את התוכנית למצב המקורי</button>
     <div id="resetConfirm" class="confirm" hidden>
-      <span>להחזיר את הסטים, החזרות ומספרי המכשירים למקור? המשקלים שלך יישארו.</span>
+      <span>להחזיר את התוכנית בדיוק כפי שנוצרה? תרגילים שמחקת יחזרו, תרגילים שהוספת יימחקו, והסטים, החזרות ומספרי המכשירים יחזרו למקור. המשקלים וההיסטוריה שלך יישארו.</span>
       <div class="row">
         <button id="resetYes" class="btn btn-primary" style="font-size:1rem;padding:12px">כן, החזר</button>
         <button id="resetNo" class="btn btn-ghost">ביטול</button>
@@ -219,12 +236,64 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   </div>
   <div class="backup">
     <h2>גיבוי והעברה</h2>
-    <p class="note" style="margin:0">שומר קובץ עם כל המשקלים, ההיסטוריה והתרגילים שהוספת. כך אפשר להעביר אותם לטלפון אחר או לכתובת חדשה של האפליקציה.</p>
+    <p class="note" style="margin:0">שומר קובץ עם כל התוכניות, המשקלים וההיסטוריה. כך אפשר להעביר אותם לטלפון אחר או לכתובת חדשה של האפליקציה.</p>
     <div class="row">
       <button id="exportBtn" class="btn btn-ghost">שמור קובץ גיבוי</button>
       <label class="btn btn-ghost file-btn">טען קובץ גיבוי<input id="importInput" type="file" accept=".json,application/json"></label>
     </div>
   </div>
+</section>
+
+<!-- PROGRAMS -->
+<section id="progs" class="wrap" hidden>
+  <header style="display:flex;flex-direction:column;gap:6px">
+    <h1>התוכניות שלי</h1>
+    <p class="muted" style="margin:0">אפשר לשמור כמה תוכניות ולעבור ביניהן. ההיסטוריה והמשקלים נשמרים בכל מקרה.</p>
+  </header>
+  <div id="progList" style="display:flex;flex-direction:column;gap:10px"></div>
+  <h2>תוכנית חדשה</h2>
+  <button id="importProgBtn" class="btn btn-primary">יש לי קוד תוכנית מ־Claude</button>
+  <button id="newProgBtn" class="btn btn-ghost">בנייה ידנית עם תמונת הדף</button>
+  <div class="note">
+    <b>איך הופכים דף מהמאמן לתוכנית:</b>
+    <ol class="steps">
+      <li>מצלמים את הדף שהמאמן כתב.</li>
+      <li>שולחים את התמונה ל־Claude בצ׳אט ומבקשים "קוד תוכנית לאפליקציית האימון".</li>
+      <li>מעתיקים את הקוד שמתקבל, לוחצים כאן על "יש לי קוד תוכנית" ומדביקים.</li>
+    </ol>
+  </div>
+  <button id="progsBack" class="btn btn-ghost">חזרה</button>
+</section>
+
+<!-- IMPORT PROGRAM CODE -->
+<section id="importprog" class="wrap" hidden>
+  <header style="display:flex;flex-direction:column;gap:6px">
+    <h1>הדבקת קוד תוכנית</h1>
+    <p class="muted" style="margin:0">הדבק כאן את הקוד ש־Claude נתן לך. התוכנית החדשה תישמר ותהפוך לפעילה.</p>
+  </header>
+  <label class="field"><span>קוד התוכנית</span><textarea id="progCode" class="code-box" spellcheck="false" placeholder='{"app":"gym-plan", ...}'></textarea></label>
+  <p id="progCodeErr" class="err" hidden></p>
+  <button id="progCodeGo" class="btn btn-primary">צור את התוכנית</button>
+  <button id="progCodeCancel" class="btn btn-ghost">ביטול</button>
+</section>
+
+<!-- NEW PROGRAM BY HAND -->
+<section id="newprog" class="wrap" hidden>
+  <header style="display:flex;flex-direction:column;gap:6px">
+    <h1>תוכנית חדשה</h1>
+    <p class="muted" style="margin:0">נותנים שם, ואם רוצים מצלמים את הדף מהמאמן. אחר כך מוסיפים את התרגילים אחד אחד, ותמונת הדף מוצגת לך כדי להעתיק ממנה.</p>
+  </header>
+  <form id="npForm" class="form" novalidate>
+    <label class="field"><span>שם התוכנית</span><input id="npName" type="text" placeholder="למשל: תוכנית נובמבר"></label>
+    <label class="field"><span>הערה (לא חובה)</span><input id="npNote" type="text" placeholder="למשל: מבנג׳י, 3 פעמים בשבוע"></label>
+    <div class="field"><span>תמונת הדף מהמאמן (לא חובה)</span>
+      <label class="photo-btn"><span id="npPhotoTxt">צלם את דף התוכנית</span><input id="npPhoto" type="file" accept="image/*" capture="environment"></label>
+      <img id="npPreview" class="ref-photo" alt="" hidden>
+    </div>
+    <p id="npErr" class="err" hidden></p>
+    <button type="submit" class="btn btn-primary">צור תוכנית והוסף תרגילים</button>
+    <button type="button" id="npCancel" class="btn btn-ghost">ביטול</button>
+  </form>
 </section>
 
 <!-- NEW EXERCISE -->
@@ -416,18 +485,19 @@ const PLAN = [
      tip:'שכיבה על הגב, ברכיים כפופות. מרימים את הכתפיים מהרצפה בעזרת הבטן, בלי למשוך את הראש.'}]}
 ];
 const DEFAULT_W = 25;
-let custom = [];          // exercises the user added: {id,name,g,machine,sets,target,reps,rest,w,tip,fig,custom:true}
+/* Programs: each has its own list of exercises. `orig` keeps the version it was created with. */
+let programs = [], activeProg = null;
 let GROUPS = [], EXS = [], byId = {};
+const clone = o => JSON.parse(JSON.stringify(o));
+const curProg = () => programs.find(p => p.id === activeProg) || programs[0];
 function buildPlan(){
-  GROUPS = PLAN.map(gr => ({g:gr.g, items:gr.items.map(ex => ({...ex, g:gr.g}))}));
-  custom.forEach(c => {
-    let gr = GROUPS.find(x => x.g === c.g);
-    if (!gr){ gr = {g:c.g, items:[]}; GROUPS.push(gr); }
-    gr.items.push({...c});
-  });
+  const pr = curProg();
+  GROUPS = (pr ? pr.groups : []).filter(gr => gr.items.length).map(gr => ({g:gr.g, items:gr.items.map(ex => ({...ex, g:gr.g}))}));
   EXS = GROUPS.flatMap(gr => gr.items);
   byId = Object.fromEntries(EXS.map(e => [e.id, e]));
 }
+function saveProgs(){ store.set('programs', programs); store.set('activeProg', activeProg); }
+const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 // Muscle map shapes: front and back body, 100x200 each (from react-body-highlighter, MIT License, © 2020 GV79)
 const MUSC = {"front":[["chest",["51.8 41.6 51.0 55.1 58.0 58.0 67.8 55.5 70.6 47.3 62.0 41.6","29.8 46.5 31.4 55.5 40.8 58.0 48.2 55.1 47.8 42.0 37.6 42.0"]],["obliques",["68.6 63.3 67.3 57.1 58.8 59.6 60.0 64.1 60.4 83.3 65.7 78.8 66.5 69.8","33.9 78.4 33.1 71.8 31.0 63.3 32.2 57.1 40.8 59.2 39.2 63.3 39.2 83.7"]],["abs",["56.3 59.2 58.0 64.1 58.4 78.0 58.4 92.7 56.3 98.4 55.1 104.1 51.4 107.8 51.0 84.5 50.6 67.3 51.0 57.1","43.7 58.8 48.6 57.1 49.0 67.3 48.6 84.5 48.2 107.3 44.5 103.7 40.8 91.4 40.8 78.4 41.2 64.5"]],["biceps",["16.7 68.2 18.0 71.4 22.9 66.1 29.0 53.9 27.8 49.4 20.4 55.9","71.4 49.4 70.2 54.7 76.3 66.1 81.6 71.8 82.9 69.0 78.8 55.5"]],["triceps",["69.4 55.5 69.4 61.6 75.9 72.7 77.6 70.2 75.5 67.3","22.4 69.4 29.8 55.5 29.8 60.8 22.9 73.1"]],["neck",["55.5 23.7 50.6 33.5 50.6 39.2 61.6 40.0 70.6 44.9 69.4 36.7 63.3 35.1 58.4 30.6","29.0 44.9 30.2 37.1 36.3 35.1 41.2 30.2 44.5 24.5 49.0 33.9 48.6 39.2 38.0 39.6"]],["front-deltoids",["78.4 53.1 79.6 47.8 79.2 41.2 75.9 38.0 71.0 36.3 72.2 42.9 71.4 47.3","28.2 47.3 21.2 53.1 20.0 47.8 20.4 40.8 24.5 37.1 28.6 37.1 26.9 43.3"]],["head",["42.4 2.9 40.0 11.8 42.0 19.6 46.1 23.3 49.8 25.3 54.7 22.4 57.6 19.2 59.2 10.2 57.1 2.4 49.8 0.0"]],["abductors",["52.7 110.2 54.3 124.9 60.0 110.2 62.0 100.0 64.9 94.3 60.0 92.7 56.7 104.5","47.8 110.6 44.9 125.3 42.0 115.9 40.4 113.1 39.6 107.3 38.0 102.4 34.7 93.9 39.6 92.2 41.6 99.2 43.7 105.3"]],["quadriceps",["34.7 98.8 37.1 108.2 37.1 127.8 34.3 137.1 31.0 132.7 29.4 120.0 28.2 111.4 29.4 100.8 32.2 94.7","63.3 105.7 64.5 100.0 66.9 94.7 70.2 101.2 71.0 111.8 68.2 133.1 65.3 137.6 62.4 128.6 62.0 111.4","38.8 129.4 38.4 112.2 41.2 118.4 44.5 129.4 42.9 135.1 40.0 146.1 36.3 146.5 35.5 140.0","59.6 145.7 55.5 129.0 60.8 113.9 61.2 130.2 64.1 139.6 62.9 146.5","32.7 138.4 26.5 145.7 25.7 136.7 25.7 127.3 26.9 114.3 29.4 133.5","71.8 113.1 73.9 124.1 73.9 140.4 72.7 145.7 66.5 138.4 70.2 133.5"]],["knees",["33.9 140.0 34.7 143.3 35.5 147.3 36.3 151.0 35.1 156.7 29.8 156.7 27.3 152.7 27.3 147.3 30.2 144.1","65.7 140.0 72.2 147.8 72.2 152.2 69.8 157.1 64.9 156.7 62.9 151.0"]],["calves",["71.4 160.4 73.5 153.5 76.7 161.2 79.6 167.8 78.4 187.8 79.6 195.5 74.7 195.5","24.9 194.7 27.8 164.9 28.2 160.4 26.1 154.3 24.9 157.6 22.4 161.6 20.8 167.8 22.0 188.2 20.8 195.5","72.7 195.1 69.8 159.2 65.3 158.4 64.1 162.4 64.1 165.3 65.7 177.1","35.5 158.4 35.9 162.4 35.9 166.9 35.1 172.2 35.1 176.7 32.2 182.0 30.6 187.3 26.9 194.7 27.3 187.8 28.2 180.4 28.6 175.5 29.0 169.8 29.8 164.1 30.2 158.8"]],["forearm",["6.1 88.6 10.2 75.1 14.7 70.2 16.3 74.3 19.2 73.5 4.5 97.6 0.0 100.0","84.5 69.8 83.3 73.5 80.0 73.1 95.1 98.4 100.0 100.4 93.5 89.4 89.8 76.3","77.6 72.2 77.6 77.6 80.4 84.1 85.3 89.8 92.2 101.2 94.7 99.6","6.9 101.2 13.5 90.6 18.8 84.1 21.6 77.1 21.2 71.8 4.9 98.8"]]],"back":[["head",["50.6 0.0 46.0 0.9 40.9 5.5 40.4 12.8 45.1 20.0 55.7 20.0 59.1 13.6 59.6 4.7 55.7 1.3"]],["trapezius",["44.7 21.7 47.7 21.7 47.2 38.3 47.7 64.7 38.3 53.2 35.3 40.9 31.1 36.6 39.1 33.2 43.8 27.2","52.3 21.7 55.7 21.7 56.6 27.2 60.9 32.8 68.9 36.6 64.7 40.4 61.7 53.2 52.3 64.7 53.2 38.3"]],["back-deltoids",["29.4 37.0 23.0 39.1 17.4 44.3 18.3 53.6 24.3 49.4 27.2 46.4","71.1 37.0 78.3 39.6 82.6 44.7 81.7 53.6 74.9 48.9 72.3 45.1"]],["upper-back",["31.1 38.7 28.1 48.9 28.5 55.3 34.0 75.3 47.2 71.1 47.2 66.4 36.6 54.0 33.6 41.3","68.9 38.7 71.9 49.4 71.5 56.2 66.0 75.3 52.8 71.1 52.8 66.4 63.4 54.5 66.4 41.7"]],["triceps",["26.8 49.8 17.9 55.7 14.5 72.3 16.6 81.7 21.7 63.8 26.8 55.7","73.6 50.2 82.1 55.7 86.0 73.2 83.4 82.1 77.9 63.0 73.2 55.7","26.8 58.3 26.8 68.5 23.0 75.3 19.1 77.4 22.6 65.5","72.8 58.3 77.0 64.7 80.4 77.4 76.6 75.3 72.8 68.9"]],["lower-back",["47.7 72.8 34.5 77.0 35.3 83.4 49.4 102.1 46.8 83.0","52.3 72.8 65.5 77.0 64.7 83.4 50.6 102.1 53.2 83.8"]],["forearm",["86.4 75.7 91.1 83.4 93.2 94.0 100.0 106.4 96.2 104.3 88.1 89.4 84.3 83.8","13.6 75.7 8.9 83.8 6.8 93.6 0.0 106.4 3.8 104.3 12.3 88.5 15.7 83.0","81.3 79.6 77.4 77.9 79.1 84.7 91.1 103.8 93.2 108.9 94.5 104.7","18.7 79.6 22.1 77.9 20.9 84.3 9.4 103.0 6.8 108.5 5.1 104.7"]],["gluteal",["44.7 99.6 30.2 108.5 29.8 118.7 31.5 126.0 47.2 121.3 49.4 114.9","55.3 99.1 51.1 114.5 52.3 120.9 68.1 126.0 69.8 119.1 69.4 108.5"]],["adductor",["48.1 123.0 44.7 123.0 41.3 125.5 45.1 144.3 48.5 135.7 48.9 129.4","51.9 122.6 55.7 123.4 59.1 126.0 54.9 144.3 51.9 136.2 51.1 129.4"]],["hamstring",["28.9 122.1 31.1 129.4 36.6 126.0 35.3 135.3 34.5 150.2 29.4 158.3 28.9 146.8 27.7 141.3 27.2 131.5","71.5 121.7 69.4 128.9 63.8 126.0 65.5 136.6 66.4 150.2 71.1 158.3 71.5 147.7 72.8 142.1 73.6 131.9","38.7 125.5 44.3 146.0 40.4 166.8 36.2 152.8 37.0 135.3","61.7 125.5 63.4 136.2 64.3 153.2 60.0 166.8 56.2 146.4"]],["knees",["34.5 153.2 31.1 159.1 33.6 166.4 37.4 162.6","66.4 153.6 63.0 163.0 66.8 166.4 69.4 159.1"]],["calves",["29.4 160.4 28.5 167.2 24.7 179.6 23.8 192.8 25.5 197.0 28.5 193.2 29.8 180.0 31.9 171.1 31.9 166.8","37.4 165.1 35.3 167.7 33.2 171.9 31.1 180.4 30.2 191.9 34.0 200.0 38.7 190.6 39.1 168.9","63.0 165.1 61.3 168.5 61.7 190.6 66.4 199.6 70.6 191.9 68.9 179.6 66.8 170.2","70.6 160.4 72.3 168.5 75.7 179.1 76.6 192.8 74.5 196.6 72.3 193.6 70.6 179.6 68.1 168.1"]],["left-soleus",["28.5 195.7 30.2 195.7 33.6 201.7 30.6 220.0 28.5 213.6 26.8 198.3"]],["right-soleus",["69.8 195.7 71.9 195.7 73.6 198.3 71.9 213.2 70.2 219.6 67.2 202.1"]]]};
@@ -559,6 +629,9 @@ const REST_RGB = [61,123,224], PRI_RGB = [214,60,34], BASE_RGB = [203,209,218];
 const mixRGB = (a, b, t) => `rgb(${a.map((v,i) => Math.round(lerp(v, b[i], t))).join(',')})`;
 const effColor = e => mixRGB(REST_RGB, PRI_RGB, e);
 const effColor2 = e => mixRGB(BASE_RGB, PRI_RGB.map((v,i) => lerp(REST_RGB[i], v, e)), .55);
+const FIG_WORDS = [['פשיטת ברך','legext'],['כפיפת ברך','legcurl'],['לחיצת חזה','chest'],['פרפר','chest'],['חתירה','row'],['פולי עליון','pulldown'],['משיכה','pulldown'],['מתח','pulldown'],
+  ['כיסא רומי','roman'],['כסא רומי','roman'],['פשיטת גב','roman'],['כתפ','shoulder'],['כפיפת מרפק','curl'],['יד קדמית','curl'],['פשיטת מרפק','tri'],['יד אחורית','tri'],['בטן','crunch']];
+const guessFig = name => (FIG_WORDS.find(([w]) => (name||'').includes(w)) || [])[1] || null;
 function rigKey(id){ const ex = byId[id]; const k = ex?.fig ?? id; return RIG[k] ? k : null; }
 function rigSVG(key, t, e){
   const r = RIG[key], o = pose(r, t), B = 'var(--body)';
@@ -617,7 +690,20 @@ let machines = store.get('machines', {});
 let history  = store.get('history', []);
 let plan     = store.get('plan', {});
 const photoOf = id => store.get('photo.' + id, null);
-custom = store.get('custom', []);
+programs = store.get('programs', null);
+activeProg = store.get('activeProg', null);
+if (!programs || !programs.length){
+  // first run: the gym sheet from 21.10.2026 plus anything added earlier
+  const groups = clone(PLAN);
+  store.get('custom', []).forEach(c => {
+    let gr = groups.find(x => x.g === c.g);
+    if (!gr){ gr = {g:c.g, items:[]}; groups.push(gr); }
+    gr.items.push(c);
+  });
+  programs = [{id:'p1', name:'תוכנית חדר הכושר', note:'מ־21.10.2026, עם התוספות של בנג׳י', created:Date.now(), groups, orig:clone(PLAN)}];
+  activeProg = 'p1';
+  saveProgs();
+}
 buildPlan();
 
 const $ = id => document.getElementById(id);
@@ -673,19 +759,27 @@ function renderHome(){
           <div class="ed"><span class="label">משקל (ק״ג)</span><div class="mini">
             <button data-act="w" data-d="-2.5" data-id="${ex.id}" aria-label="פחות משקל">−</button><output class="num">${fmtW(defW(ex))}</output><button data-act="w" data-d="2.5" data-id="${ex.id}" aria-label="יותר משקל">+</button></div></div>
           <div class="ed"><label class="label" for="m-${ex.id}">מס׳ מכשיר</label><input id="m-${ex.id}" data-machine="${ex.id}" dir="ltr" value="${esc(machineOf(ex)||'')}" placeholder="—"></div>
-          ${ex.custom ? `<button class="del-ex${delArm===ex.id?' arm':''}" data-del="${ex.id}">${delArm===ex.id?'לחץ שוב כדי למחוק':'מחק את התרגיל'}</button>` : ''}
+          <button class="del-ex${delArm===ex.id?' arm':''}" data-del="${ex.id}">${delArm===ex.id?'לחץ שוב כדי למחוק':'מחק את התרגיל'}</button>
         </div>` : ''}
       </div>`;
     });
   });
+  if (!EXS.length) html = '<p class="note">עוד אין תרגילים בתוכנית הזו. לחץ על "הוספת תרגיל חדש".</p>';
   $('planList').innerHTML = html;
+  const pr = curProg();
+  $('progName').textContent = pr ? pr.name : '';
+  $('progNote').textContent = pr && pr.note ? pr.note : '';
+  const ref = pr ? store.get('progphoto.' + pr.id, null) : null;
+  $('refBox').hidden = !(editing && ref);
+  if (ref) $('refPhoto').src = ref;
+  $('startBtn').disabled = !EXS.length;
   $('editBtn').setAttribute('aria-pressed', editing);
   $('editBtn').textContent = editing ? 'סיום עריכה' : 'עריכת התוכנית';
   $('editHint').hidden = !editing;
   $('resetBox').hidden = !editing;
   $('resetConfirm').hidden = true;
   const active = store.get('active', null);
-  $('resumeBtn').hidden = !(active && active.v === 3);
+  $('resumeBtn').hidden = !(active && active.v === 3 && (active.prog || 'p1') === activeProg);
   $('hist').innerHTML = history.length ? history.slice(-8).reverse().map(h => {
     const d = new Date(h.date);
     return `<div class="hist-item"><span><b>${d.toLocaleDateString('he-IL')}</b> <span class="muted">· ${h.log.length} סטים</span></span>
@@ -698,8 +792,10 @@ $('planList').addEventListener('click', e => {
   if (del){
     const id = del.dataset.del;
     if (delArm !== id){ delArm = id; renderHome(); return; }
-    custom = custom.filter(c => c.id !== id); store.set('custom', custom);
-    delArm = null; buildPlan(); renderHome(); toast('התרגיל נמחק');
+    const pr = curProg();
+    pr.groups.forEach(gr => gr.items = gr.items.filter(x => x.id !== id));
+    pr.groups = pr.groups.filter(gr => gr.items.length);
+    saveProgs(); delArm = null; buildPlan(); renderHome(); toast('התרגיל נמחק');
     return;
   }
   const b = e.target.closest('[data-act]'); if (!b) return;
@@ -718,7 +814,7 @@ $('planList').addEventListener('change', e => {
 function startWorkout(resume){
   const a = store.get('active', null);
   S = (resume && a && a.v === 3) ? a
-    : {v:3, startedAt: Date.now(), group:[EXS[0].id], cur:0, done:{}, warm:{}, closed:{}, log:[], stack:[]};
+    : {v:3, prog:activeProg, startedAt: Date.now(), group:[EXS[0].id], cur:0, done:{}, warm:{}, closed:{}, log:[], stack:[]};
   S.stack = S.stack || [];
   try{ audio = audio || new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
   keepAwake();
@@ -775,7 +871,8 @@ function predictNext(){
 
 function lastFor(id){
   for (let i=history.length-1; i>=0; i--){
-    const sets = history[i].log.filter(l => l.id===id);
+    const nm = byId[id]?.name;
+    const sets = history[i].log.filter(l => l.id===id || (nm && l.name===nm));
     if (sets.length) return sets[sets.length-1];
   }
   return null;
@@ -908,7 +1005,7 @@ function finish(){
 function openPicker(){ picked = new Set(); renderPicker(); show('pick'); }
 function renderPicker(){
   const cands = EXS.filter(e => remaining(e.id) && !S.group.includes(e.id));
-  const isRec = id => S.group.some(g => PAIR[g]?.includes(id));
+  const isRec = id => S.group.every(g => byId[g].g !== byId[id].g && !musOf(g).p.some(m => musOf(id).p.includes(m)));
   const sameG = id => S.group.some(g => byId[g].g === byId[id].g);
   const card = e => `<button class="pick" data-pick="${e.id}" aria-pressed="${picked.has(e.id)}">
       <span class="thumb">${thumbOf(e.id)}</span>
@@ -1002,15 +1099,19 @@ $('exForm').addEventListener('submit', e => {
   const sets = Math.round(clamp($('fSets').value, 1, 10, 3));
   const target = Math.round(clamp($('fReps').value, 1, 60, 12));
   const ex = {
-    id: 'c' + Date.now().toString(36), custom: true, name, g,
+    id: newId('c'), custom: true, name, g,
     machine: $('fMachine').value.trim(), sets, target, reps: String(target),
     rest: Math.round(clamp($('fRest').value, 15, 600, 90)),
     w: $('fBody').checked ? 0 : clamp($('fWeight').value, 0, 500, DEFAULT_W),
-    tip: $('fTip').value.trim(), fig: $('fFig').value || null,
+    tip: $('fTip').value.trim(), fig: $('fFig').value || guessFig(name),
     muscles: [...fMus]
   };
-  custom.push(ex); store.set('custom', custom);
-  buildPlan();
+  const pr = curProg();
+  let grp = pr.groups.find(x => x.g === g);
+  if (!grp){ grp = {g, items:[]}; pr.groups.push(grp); }
+  const {g:_g, ...item} = ex;
+  grp.items.push(item);
+  saveProgs(); buildPlan();
   toast('התרגיל נוסף לתוכנית');
   if (formFrom === 'pick' && S){ picked.add(ex.id); show('pick'); renderPicker(); }
   else show('home');
@@ -1040,9 +1141,116 @@ $('photoInput').onchange = e => {
 };
 $('photoDel').onclick = () => { store.del('photo.' + curId()); toast('התמונה הוסרה'); renderStep(); };
 
+/* ---------- programs ---------- */
+let progDelArm = null;
+function exCount(pr){ return pr.groups.reduce((a, g) => a + g.items.length, 0); }
+function renderProgs(){
+  $('progList').innerHTML = programs.map(pr => {
+    const on = pr.id === activeProg;
+    return `<div class="prog-card${on ? ' on' : ''}">
+      ${on ? '<span class="badge">פעילה</span>' : ''}
+      <b>${esc(pr.name)}</b>
+      <span class="ex-meta">${pr.note ? esc(pr.note) + ' · ' : ''}${exCount(pr)} תרגילים · נוצרה ${new Date(pr.created).toLocaleDateString('he-IL')}</span>
+      <div class="row">
+        ${on ? '' : `<button class="btn btn-primary" data-use="${pr.id}">עבור לתוכנית הזו</button>`}
+        ${programs.length > 1 ? `<button class="btn btn-ghost del-ex${progDelArm===pr.id?' arm':''}" style="justify-self:auto" data-pdel="${pr.id}">${progDelArm===pr.id?'לחץ שוב כדי למחוק':'מחק'}</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function useProgram(id){
+  if (activeProg !== id && store.get('active', null)){ store.del('active'); toast('האימון שהתחיל נסגר כי עברת תוכנית'); }
+  activeProg = id; saveProgs(); buildPlan();
+}
+$('progList').addEventListener('click', e => {
+  const u = e.target.closest('[data-use]');
+  if (u){ useProgram(u.dataset.use); progDelArm = null; show('home'); toast('עברת לתוכנית: ' + curProg().name); return; }
+  const d = e.target.closest('[data-pdel]'); if (!d) return;
+  const id = d.dataset.pdel;
+  if (progDelArm !== id){ progDelArm = id; renderProgs(); return; }
+  programs = programs.filter(p => p.id !== id); store.del('progphoto.' + id);
+  if (activeProg === id){ store.del('active'); activeProg = programs[0].id; }
+  progDelArm = null; saveProgs(); buildPlan(); renderProgs(); toast('התוכנית נמחקה');
+});
+$('progsBtn').onclick = () => { progDelArm = null; renderProgs(); show('progs'); };
+$('progsBack').onclick = () => show('home');
+
+// Import a program from a code (JSON) that Claude wrote from a photo of the trainer's sheet
+function parseProgram(text){
+  let d;
+  try{ d = JSON.parse(text.trim().replace(/^```(json)?/i, '').replace(/```$/, '')); }
+  catch(e){ throw 'הקוד לא תקין. ודא שהעתקת את כולו, מהסוגר הראשון { עד האחרון }.'; }
+  const gs = Array.isArray(d) ? d : d.groups;
+  if (!Array.isArray(gs) || !gs.length) throw 'לא מצאתי תרגילים בקוד.';
+  const num = (v, lo, hi, def) => { v = parseFloat(v); return isNaN(v) ? def : Math.min(hi, Math.max(lo, v)); };
+  const groups = gs.map(gr => ({
+    g: String(gr.g || gr.group || 'כללי').trim(),
+    items: (gr.items || gr.exercises || []).filter(x => x && x.name).map(x => {
+      const reps = String(x.reps ?? x.target ?? 12).replace('-', '–');
+      const target = Math.round(num(x.target ?? String(reps).match(/\d+/g)?.slice(-1)[0], 1, 100, 12));
+      const fig = RIG[x.fig] ? x.fig : guessFig(x.name);
+      return {
+        id: newId('x'), name: String(x.name).trim(), machine: String(x.machine ?? '').trim(),
+        sets: Math.round(num(x.sets, 1, 10, 3)), reps, target, rest: Math.round(num(x.rest, 15, 600, 90)),
+        w: x.w === 0 || x.bodyweight ? 0 : num(x.w, 0, 500, DEFAULT_W),
+        tip: x.tip ? String(x.tip) : '', fig,
+        muscles: Array.isArray(x.muscles) ? x.muscles.filter(m => MUS_HE[m]) : undefined
+      };
+    })
+  })).filter(gr => gr.items.length);
+  if (!groups.length) throw 'לא מצאתי תרגילים בקוד.';
+  groups.forEach(gr => gr.items.forEach(i => { if (!i.muscles || !i.muscles.length) delete i.muscles; }));
+  return {id:newId('p'), name:String(d.name || 'תוכנית חדשה').trim(), note:String(d.note || '').trim(), created:Date.now(), groups, orig:clone(groups)};
+}
+$('importProgBtn').onclick = () => { $('progCode').value = ''; $('progCodeErr').hidden = true; show('importprog'); };
+$('progCodeCancel').onclick = () => { renderProgs(); show('progs'); };
+$('progCode').addEventListener('input', () => { $('progCodeErr').hidden = true; });
+$('progCodeGo').onclick = () => {
+  try{
+    const pr = parseProgram($('progCode').value);
+    programs.push(pr); useProgram(pr.id);
+    show('home'); toast(`התוכנית "${pr.name}" נוצרה עם ${exCount(pr)} תרגילים`);
+  }catch(err){ $('progCodeErr').textContent = typeof err === 'string' ? err : 'משהו השתבש. נסה להעתיק את הקוד שוב.'; $('progCodeErr').hidden = false; }
+};
+
+// Build a program by hand, with the sheet's photo for reference
+let npPhotoData = null;
+function shrinkPhoto(file, max, cb){
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(img.src);
+    cb(c.toDataURL('image/jpeg', 0.75));
+  };
+  img.onerror = () => toast('לא הצלחתי לפתוח את התמונה');
+  img.src = URL.createObjectURL(file);
+}
+$('newProgBtn').onclick = () => {
+  npPhotoData = null; $('npName').value = ''; $('npNote').value = ''; $('npPreview').hidden = true;
+  $('npPhotoTxt').textContent = 'צלם את דף התוכנית'; $('npErr').hidden = true; show('newprog');
+};
+$('npPhoto').onchange = e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  shrinkPhoto(f, 1400, data => { npPhotoData = data; $('npPreview').src = data; $('npPreview').hidden = false; $('npPhotoTxt').textContent = 'צלם שוב'; });
+  e.target.value = '';
+};
+$('npCancel').onclick = () => { renderProgs(); show('progs'); };
+$('npForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('npName').value.trim();
+  if (!name){ $('npErr').textContent = 'תן שם לתוכנית.'; $('npErr').hidden = false; return; }
+  const pr = {id:newId('p'), name, note:$('npNote').value.trim(), created:Date.now(), groups:[], orig:[]};
+  programs.push(pr);
+  if (npPhotoData){ try{ localStorage.setItem('gym.progphoto.' + pr.id, JSON.stringify(npPhotoData)); }catch(err){ toast('אין מקום לשמור את התמונה בטלפון'); } }
+  useProgram(pr.id); editing = true; show('home'); toast('התוכנית נוצרה. עכשיו הוסף תרגילים');
+});
+
 /* ---------- backup ---------- */
 $('exportBtn').onclick = () => {
-  const data = {app:'gym-log', saved:new Date().toISOString(), weights, machines, history, plan, custom};
+  const data = {app:'gym-log', v:2, saved:new Date().toISOString(), weights, machines, history, plan, programs, activeProg};
   const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1058,8 +1266,17 @@ $('importInput').onchange = e => {
     try{
       const d = JSON.parse(r.result);
       if (d.app !== 'gym-log') throw 0;
-      weights = d.weights||{}; machines = d.machines||{}; history = d.history||[]; plan = d.plan||{}; custom = d.custom||[];
-      store.set('weights', weights); store.set('machines', machines); store.set('history', history); store.set('plan', plan); store.set('custom', custom);
+      weights = d.weights||{}; machines = d.machines||{}; history = d.history||[]; plan = d.plan||{};
+      if (d.programs && d.programs.length){ programs = d.programs; activeProg = d.activeProg || programs[0].id; }
+      else if (d.custom && d.custom.length){
+        const pr = programs.find(x => x.id === 'p1') || curProg();
+        d.custom.forEach(c => {
+          if (pr.groups.some(gr => gr.items.some(i => i.id === c.id))) return;
+          let gr = pr.groups.find(x => x.g === c.g); if (!gr){ gr = {g:c.g, items:[]}; pr.groups.push(gr); }
+          gr.items.push(c);
+        });
+      }
+      store.set('weights', weights); store.set('machines', machines); store.set('history', history); store.set('plan', plan); saveProgs();
       buildPlan(); renderHome(); toast('הגיבוי נטען');
     }catch(err){ toast('זה לא קובץ גיבוי של האפליקציה'); }
     e.target.value = '';
@@ -1068,7 +1285,7 @@ $('importInput').onchange = e => {
 };
 
 /* ---------- utils & events ---------- */
-function show(id){ ['home','work','pick','addex','summary'].forEach(s => $(s).hidden = s!==id); window.scrollTo(0,0); if (id==='home') renderHome(); }
+function show(id){ ['home','work','pick','addex','progs','importprog','newprog','summary'].forEach(s => $(s).hidden = s!==id); window.scrollTo(0,0); if (id==='home') renderHome(); }
 async function keepAwake(){ try{ wakeLock = await navigator.wakeLock?.request('screen'); }catch(e){} }
 function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState==='visible' && S) keepAwake(); });
@@ -1079,7 +1296,14 @@ $('resumeBtn').onclick = () => { editing = false; startWorkout(true); };
 $('editBtn').onclick = () => { editing = !editing; renderHome(); };
 $('resetBtn').onclick = () => { $('resetConfirm').hidden = false; };
 $('resetNo').onclick = () => { $('resetConfirm').hidden = true; };
-$('resetYes').onclick = () => { plan = {}; machines = {}; store.set('plan', plan); store.set('machines', machines); renderHome(); };
+$('resetYes').onclick = () => {
+  const pr = curProg();
+  EXS.forEach(e => { delete plan[e.id]; delete machines[e.id]; });
+  if (pr.orig && pr.orig.length) pr.groups = clone(pr.orig);
+  buildPlan();
+  EXS.forEach(e => { delete plan[e.id]; delete machines[e.id]; });
+  store.set('plan', plan); store.set('machines', machines); saveProgs(); renderHome(); toast('התוכנית חזרה למצב המקורי');
+};
 $('doneBtn').onclick = complete;
 $('addBtn').onclick = openPicker;
 $('skipBtn').onclick = () => {
