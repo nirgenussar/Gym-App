@@ -1,5 +1,5 @@
 // Offline support: keep the app files on the phone, refresh them in the background
-const CACHE = 'gym-app-v6';
+const CACHE = 'gym-app-v7';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
