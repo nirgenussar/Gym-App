@@ -196,6 +196,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 details.ref{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 details.ref summary{font-weight:700;cursor:pointer}
 .steps{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px}
+.top-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.switch-top{width:100%;padding:12px;border:2px solid var(--pen);color:var(--pen);background:var(--surface);font-weight:800;font-size:1.02rem;border-radius:14px}
+.pick.single .check{display:none}
+.pick.single{grid-template-columns:64px 1fr}
+.pick .go-arrow{font-weight:800;color:var(--pen)}
+.rest .alt{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.7);max-width:360px;width:100%}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 
@@ -348,7 +354,10 @@ details.ref summary{font-weight:700;cursor:pointer}
     <span class="circuit-head">סבב משולב · עוברים ביניהם אחרי כל סט</span>
     <div class="circuit-list" id="circuitList"></div>
   </div>
-  <button id="addBtn" class="add-top">+ שלב תרגיל נוסף לסבב</button>
+  <div class="top-actions">
+    <button id="switchBtn" class="switch-top">בחר תרגיל</button>
+    <button id="addBtn" class="add-top">+ שלב בסבב</button>
+  </div>
   <div class="card">
     <h2 class="ex-title" id="exTitle">—</h2>
     <img id="photo" class="photo" alt="תמונת השלט של המכשיר" hidden>
@@ -410,10 +419,10 @@ details.ref summary{font-weight:700;cursor:pointer}
 <!-- PICKER -->
 <section id="pick" class="wrap" hidden>
   <header style="display:flex;flex-direction:column;gap:6px">
-    <h1>שלב תרגיל נוסף</h1>
-    <p class="muted" style="margin:0">סמן מכשיר אחד או יותר. אחרי כל סט ומנוחה האפליקציה תעביר אותך לתרגיל הבא בסבב, וכך תעבוד על כמה קבוצות שרירים בלי לחכות.</p>
+    <h1 id="pickTitle">שלב תרגיל נוסף</h1>
+    <p class="muted" style="margin:0" id="pickDesc">סמן מכשיר אחד או יותר. אחרי כל סט ומנוחה האפליקציה תעביר אותך לתרגיל הבא בסבב, וכך תעבוד על כמה קבוצות שרירים בלי לחכות.</p>
   </header>
-  <div class="pick-now"><span class="label">עכשיו בסבב</span><div id="pickNow" style="font-weight:800"></div></div>
+  <div class="pick-now" id="pickNowBox"><span class="label" id="pickNowLabel">עכשיו בסבב</span><div id="pickNow" style="font-weight:800"></div></div>
   <div id="pickList" class="pick-list"></div>
   <button id="pickNewBtn" class="add-new">+ תרגיל חדש שלא ברשימה</button>
   <div class="pick-foot">
@@ -432,6 +441,7 @@ details.ref summary{font-weight:700;cursor:pointer}
     <button id="restPlus" class="btn">+15 שנ׳</button>
     <button id="restSkip" class="btn">אני מוכן</button>
   </div>
+  <button id="restSwitch" class="btn alt">בחר תרגיל אחר</button>
 </div>
 
 <div id="toast" class="toast" hidden></div>
@@ -1002,8 +1012,42 @@ function finish(){
 }
 
 /* ---------- picker: combine exercises ---------- */
-function openPicker(){ picked = new Set(); renderPicker(); show('pick'); }
+/* mode 'add' = combine into the round; 'switch' = jump to any exercise; 'start' = choose where to begin */
+let pickMode = 'add';
+const ADD_DESC = 'סמן מכשיר אחד או יותר. אחרי כל סט ומנוחה האפליקציה תעביר אותך לתרגיל הבא בסבב, וכך תעבוד על כמה קבוצות שרירים בלי לחכות.';
+function openPicker(mode){ pickMode = mode || 'add'; picked = new Set(); renderPicker(); show('pick'); }
+function renderSwitchList(){
+  const cur = curId();
+  const cands = EXS.filter(e => remaining(e.id) && e.id !== cur);
+  const nextUp = pickMode === 'start' ? EXS.find(e => remaining(e.id))?.id : predictNext()?.id;
+  const card = e => {
+    const left = setsOf(e) - (S.done[e.id]||0), started = S.done[e.id] > 0;
+    return `<button class="pick single" data-go="${e.id}">
+      <span class="thumb">${thumbOf(e.id)}</span>
+      <span class="pick-body">
+        <b>${esc(e.name)}</b>
+        <span class="ex-meta">${esc(e.g)} · מכשיר <bdi dir="ltr">${esc(machineOf(e)||'—')}</bdi> · ${started ? `נשארו ${left} סטים` : `${setsOf(e)} סטים`}</span>
+        ${e.id === nextUp ? '<span class="rec">הבא לפי התוכנית</span>' : ''}
+      </span>
+    </button>`;
+  };
+  const list = pickMode === 'start' ? EXS.filter(e => remaining(e.id)) : cands;
+  let html = '';
+  GROUPS.forEach(gr => {
+    const items = list.filter(e => e.g === gr.g);
+    if (items.length) html += `<div class="grp-title">${esc(gr.g)}</div>` + items.map(card).join('');
+  });
+  $('pickList').innerHTML = html || '<p class="note">זה התרגיל האחרון שנשאר באימון.</p>';
+}
 function renderPicker(){
+  const sw = pickMode !== 'add';
+  $('pickTitle').textContent = pickMode === 'start' ? 'במה מתחילים?' : sw ? 'בחר תרגיל' : 'שלב תרגיל נוסף';
+  $('pickDesc').textContent = sw ? 'לחץ על התרגיל שאתה רוצה לעשות עכשיו, לפי המכשיר הפנוי. תרגיל שהתחלת ולא סיימת יחכה לך, ותוכל לחזור אליו מתי שתרצה.' : ADD_DESC;
+  $('pickNowBox').hidden = pickMode === 'start';
+  $('pickNowLabel').textContent = sw ? 'עכשיו' : 'עכשיו בסבב';
+  $('pickGo').hidden = sw;
+  $('pickCancel').textContent = pickMode === 'start' ? 'התחל לפי סדר התוכנית' : 'ביטול';
+  if (sw){ $('pickNow').textContent = byId[curId()]?.name || ''; renderSwitchList(); return; }
   const cands = EXS.filter(e => remaining(e.id) && !S.group.includes(e.id));
   const isRec = id => S.group.every(g => byId[g].g !== byId[id].g && !musOf(g).p.some(m => musOf(id).p.includes(m)));
   const sameG = id => S.group.some(g => byId[g].g === byId[id].g);
@@ -1025,7 +1069,13 @@ function renderPicker(){
   $('pickGo').disabled = !picked.size;
   $('pickGo').textContent = picked.size ? `שלב בסבב (${picked.size})` : 'סמן תרגיל לשילוב';
 }
+function switchTo(id){
+  if (pickMode !== 'start') snap();
+  S.group = [id]; S.cur = 0;
+  show('work'); renderStep();
+}
 $('pickList').addEventListener('click', e => {
+  const g = e.target.closest('[data-go]'); if (g){ switchTo(g.dataset.go); return; }
   const b = e.target.closest('[data-pick]'); if (!b) return;
   const id = b.dataset.pick;
   picked.has(id) ? picked.delete(id) : picked.add(id);
@@ -1113,7 +1163,8 @@ $('exForm').addEventListener('submit', e => {
   grp.items.push(item);
   saveProgs(); buildPlan();
   toast('התרגיל נוסף לתוכנית');
-  if (formFrom === 'pick' && S){ picked.add(ex.id); show('pick'); renderPicker(); }
+  if (formFrom === 'pick' && S && pickMode !== 'add'){ switchTo(ex.id); }
+  else if (formFrom === 'pick' && S){ picked.add(ex.id); show('pick'); renderPicker(); }
   else show('home');
 });
 $('newExBtn').onclick = () => openForm('home');
@@ -1291,7 +1342,10 @@ function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLoc
 document.addEventListener('visibilitychange', () => { if (document.visibilityState==='visible' && S) keepAwake(); });
 function bump(input, d){ input.value = fmtW(Math.max(0, (parseFloat(input.value)||0) + d)); }
 
-$('startBtn').onclick = () => { store.del('active'); editing = false; startWorkout(false); };
+$('startBtn').onclick = () => {
+  store.del('active'); editing = false; startWorkout(false);
+  if (EXS.length > 1) openPicker('start');
+};
 $('resumeBtn').onclick = () => { editing = false; startWorkout(true); };
 $('editBtn').onclick = () => { editing = !editing; renderHome(); };
 $('resetBtn').onclick = () => { $('resetConfirm').hidden = false; };
@@ -1305,7 +1359,9 @@ $('resetYes').onclick = () => {
   store.set('plan', plan); store.set('machines', machines); saveProgs(); renderHome(); toast('התוכנית חזרה למצב המקורי');
 };
 $('doneBtn').onclick = complete;
-$('addBtn').onclick = openPicker;
+$('addBtn').onclick = () => openPicker('add');
+$('switchBtn').onclick = () => openPicker('switch');
+$('restSwitch').onclick = () => { endRest(); openPicker('switch'); };
 $('skipBtn').onclick = () => {
   const id = curId(); snap(); S.closed[id] = true;
   if (!advance(id)) finish(); else renderStep();
